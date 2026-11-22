@@ -1,0 +1,7 @@
+Mosque photos — demo use, sourced from Wikimedia Commons / Wikipedia:
+m1 "Supplicating Pilgrim at Masjid Al Haram. Mecca, Saudi Arabia" — Commons
+m2 "Masjid Nabawi The Prophet's Mosque, Madina" — Commons
+m3 "Sheikh Zayed Mosgue view" — en.wikipedia
+m4 "Exterior of Sultan Ahmed I Mosque in Istanbul, Turkey" — Commons
+m5 "Putra Mosque being reflected in the lake (crop)" — Commons
+Avatars in ../avatars are AI-generated portraits (demo only, not real people).

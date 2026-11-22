@@ -1,0 +1,134 @@
+/* ============================================================
+   Wahda · Daily Quiz — Design Tokens  v3
+   Direction: Geometric Pulse
+   Deep-green fields · lime signal · girih geometry · chunky numerals
+
+   Single source of truth. Components reference variables only.
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* ---------- Canvas & surface ---------- */
+  --canvas:      #eef3ef;
+  --canvas-2:    #e2ebe5;
+  --surface:     #ffffff;
+  --surface-2:   #f6faf7;
+  --surface-3:   #eaf2ed;
+
+  /* ---------- Ink ---------- */
+  --ink:         #0a2419;   /* 15.2:1 on canvas */
+  --ink-2:       #45574e;   /*  7.1:1 */
+  --ink-3:       #6c7d74;   /*  4.6:1 — smallest allowed */
+  --ink-inv:     #ffffff;
+  --ink-inv-2:   rgba(255, 255, 255, 0.74);
+  --ink-inv-3:   rgba(255, 255, 255, 0.50);
+
+  /* ---------- Green ramp ---------- */
+  --g-950: #032016;
+  --g-900: #063526;
+  --g-800: #094735;
+  --g-700: #0c5b43;
+  --g-600: #117456;
+  --g-500: #189069;
+  --g-400: #2faa82;
+  --g-300: #64c7a2;
+  --g-200: #a8e0c9;
+  --g-100: #d7f0e5;
+  --g-50:  #ecf8f2;
+
+  /* ---------- Signal accents ---------- */
+  --lime:       #d9f36c;
+  --lime-deep:  #b8da3d;
+  --lime-soft:  #f2fbc9;
+
+  --gold:       #f0b02e;
+  --gold-soft:  #ffe6ad;
+  --gold-ink:   #7a4f00;
+
+  --sky:        #3f9fc4;
+  --sky-soft:   #dcf0f8;
+
+  --rose:       #d95145;
+  --rose-deep:  #a8342a;
+  --rose-soft:  #fce5e2;
+
+  /* ---------- Lines ---------- */
+  --line:       #dde7e0;
+  --line-2:     #edf3ef;
+  --line-3:     #cbd9d1;
+  --line-inv:   rgba(255, 255, 255, 0.15);
+  --line-inv-2: rgba(255, 255, 255, 0.28);
+
+  /* ---------- Type ---------- */
+  --font-display: "Outfit", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+                  system-ui, sans-serif;
+  --font-text:    "Plus Jakarta Sans", "PingFang SC", "Hiragino Sans GB",
+                  "Microsoft YaHei", system-ui, sans-serif;
+  --font-num:     "Outfit", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* 语义化字号阶梯 — 13 档，每档一个用途。新增组件必须复用，不得新造取值。
+     顺序由小到大，相邻档之间保持可辨差异（≥1px 且在小字号区间 ≥8%）。 */
+  --t-micro:     9.5px;   /* 极微：印章月份、百分号、序号角标 */
+  --t-label:    10.5px;   /* 标签：大写元信息、国家、选项字母角标 */
+  --t-caption:  11.5px;   /* 注脚：时间、说明、辅助句、排序控件 */
+  --t-small:    12.5px;   /* 小正文：评论正文、卡片内段落、提示行 */
+  --t-body:     13.5px;   /* 正文：选项文字、人名列表、输入框 */
+  --t-body-lg:  15px;     /* 强调正文：名单人名、分数、CTA 文案 */
+  --t-title-sm: 16px;     /* 小标题：顶栏标题、字母块 */
+  --t-title:    19px;     /* 区块标题 */
+  --t-display-s:21px;     /* 次大标题：分享卡题干、统计数字 */
+  --t-display:  27px;     /* 主标题：题目、页面大标题 */
+  --t-hero:     30px;     /* 首页题干 */
+  --t-hero-lg:  34px;     /* 判语大标题 */
+  --t-num-xl:   42px;     /* 榜单名次大数字 */
+
+  /* 行高 — 4 档，按「是否多行」选择，不按元素选择 */
+  --lh-none:  1;
+  --lh-tight: 1.16;   /* 大字标题 */
+  --lh-snug:  1.3;    /* 段落标题、题干 */
+  --lh-body:  1.55;   /* 正文 */
+
+  --track-label: 0.09em;
+  --track-tight: -0.02em;
+
+  /* ---------- Space ---------- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 28px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+
+  /* ---------- Radius — 5 档，按元素体积选择 ---------- */
+  --r-xs:   4px;    /* 字母块、微标、进度条 */
+  --r-sm:   8px;    /* 按钮、输入框、小卡 */
+  --r-md:   12px;   /* 标准卡片、列表项 */
+  --r-lg:   20px;   /* 大卡、主视觉、面板 */
+  --r-pill: 999px;
+
+  /* ---------- Elevation ---------- */
+  --sh-xs:  0 1px 2px rgba(9, 36, 25, 0.06);
+  --sh-sm:  0 2px 6px rgba(9, 36, 25, 0.06), 0 1px 2px rgba(9, 36, 25, 0.04);
+  --sh-md:  0 6px 18px -8px rgba(9, 36, 25, 0.22), 0 2px 4px rgba(9, 36, 25, 0.05);
+  --sh-lg:  0 18px 42px -20px rgba(9, 36, 25, 0.38), 0 4px 10px -6px rgba(9, 36, 25, 0.12);
+  --sh-xl:  0 32px 64px -28px rgba(3, 32, 22, 0.55);
+
+  /* ---------- Motion ---------- */
+  --ease:      cubic-bezier(0.22, 0.68, 0.32, 1);
+  --ease-out:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-back: cubic-bezier(0.34, 1.42, 0.64, 1);
+  --d-fast: 130ms;
+  --d-mid:  240ms;
+  --d-slow: 420ms;
+
+  /* ---------- Layout ---------- */
+  --shell: 480px;
+  --gutter: 18px;
+  --topbar-h: 58px;
+}
