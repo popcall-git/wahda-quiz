@@ -2364,3 +2364,26 @@ button { cursor: pointer; }
 }
 .sp-q { margin: 0; font-size: var(--t-body); font-weight: 600; line-height: var(--lh-snug); }
 .sp-foot { font-size: var(--t-caption); color: var(--ink-inv-2); }
+
+/* 提交答案后的分享入口行：分享这道题 + 分享到我的动态 */
+.share-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.share-row .btn {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+}
+
+.share-row .btn-ico { display: inline-flex; }
+.share-row .btn-ico svg { width: 15px; height: 15px; }
+
+.share-row .feed-share.is-on {
+  border-color: var(--g-600);
+  background: var(--g-50);
+  color: var(--g-700);
+  font-weight: 700;
+}

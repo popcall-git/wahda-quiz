@@ -288,7 +288,6 @@
           <b>${esc(ok ? C.t("result.correctTitle") : C.t("result.wrongTitle"))}</b>
           <span>${esc(C.t("result.correctAnswer"))} · ${"ABCD"[q.a]}. ${esc(C.pick(q.o[q.a]))}</span>
         </div>
-        <button class="hv-link" data-nav="result">${esc(C.t("home.viewResult"))}${icon.chevronR}</button>
       </div>`;
     })() : "";
 
@@ -326,10 +325,16 @@
 
   ${mine ? knowBlock() : ""}
   ${mine ? friendsBlock(friends, friendsOpen) : ""}
-  ${mine ? `<button class="btn btn--line btn--block feed-share${C.feedShared(info.index) ? " is-on" : ""}" data-act="feed-share">
-    <span>${esc(C.feedShared(info.index) ? C.t("home.shareDone") : C.t("home.shareFeed"))}</span>
-    <span class="btn-ico">${icon.share}</span>
-  </button>` : ""}
+  ${mine ? `<div class="share-row">
+    <button class="btn btn--line share-q" data-nav="share">
+      <span>${esc(C.t("result.share"))}</span>
+      <span class="btn-ico">${icon.share}</span>
+    </button>
+    <button class="btn btn--line feed-share${C.feedShared(info.index) ? " is-on" : ""}" data-act="feed-share">
+      <span>${esc(C.feedShared(info.index) ? C.t("home.shareDone") : C.t("home.shareFeed"))}</span>
+      <span class="btn-ico">${icon.check}</span>
+    </button>
+  </div>` : ""}
 
   <div class="stat-row">
     <div class="stat-card">
