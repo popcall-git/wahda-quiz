@@ -152,7 +152,8 @@
   ];
 
   window.QZ_SEED = {
-    me: { id: "me", name: "Amina", country: "Indonesia", initials: "AM" },
+    /* 历史基线：演示用的「加入以来」累计答题数，接入真实账号时以服务端为准 */
+    me: { id: "me", name: "Amina", country: "Indonesia", initials: "AM", history: { answered: 96, correct: 62 } },
     people,
     common,
     topics

@@ -45,14 +45,33 @@
     }).format(d);
   }
 
-  /* ---------- 每日一题：顺序取题 + 轮次循环 ---------- */
+  /* ---------- 每日两题：选择题 / 开放题各自顺序轮换 ---------- */
+
+  const QS = (window.QZ_DATA && window.QZ_DATA.qs) || [];
+  const MIXED = (window.QZ_DATA && window.QZ_DATA.order) || [];
+  /* 沿用原有洗牌顺序，按题型拆成两条独立队列：每天各出一题，互不影响 */
+  const CHOICE_ORDER = MIXED.filter((i) => QS[i] && QS[i].t === 0);
+  const OPEN_ORDER = MIXED.filter((i) => QS[i] && QS[i].t === 1);
+  const NC = CHOICE_ORDER.length;
+  const NO = OPEN_ORDER.length;
+
+  function slot(order, count, index) {
+    const round = Math.floor(index / count) + 1;
+    const pos = ((index % count) + count) % count;
+    return { round, pos, total: count, question: QS[order[pos]] };
+  }
 
   function dayInfo(index) {
-    const order = window.QZ_DATA.order;
-    const round = Math.floor(index / N) + 1;
-    const pos = ((index % N) + N) % N;
-    const question = window.QZ_DATA.qs[order[pos]];
-    return { index, round, pos, total: N, question, date: dateOf(index) };
+    const choice = slot(CHOICE_ORDER, NC, index);
+    return {
+      index,
+      date: dateOf(index),
+      round: choice.round,
+      pos: choice.pos,
+      total: choice.total,
+      question: choice.question,
+      open: slot(OPEN_ORDER, NO, index)
+    };
   }
 
   /* ---------- 本地状态（Demo：默认已登录，数据存在本机） ---------- */
@@ -103,8 +122,12 @@
     const list = myPosts(index).slice();
     list.push({ id: key + "-p" + list.length, text, ts: Date.now() });
     state.posts[key] = list;
-    state.answers[key] = { text: list[0].text, ts: list[0].ts };
     save();
+  }
+
+  /* 当天是否参与过（选择题已答或开放题已发言） */
+  function dayDone(index) {
+    return !!answerOf(index) || myPosts(index).length > 0;
   }
 
   function setLang(lang) {
@@ -198,6 +221,38 @@
     };
   }
 
+  /* 好友历史正确率（演示口径）：把 seed 的累计答对数线性映射到 38–86% */
+  const BASE_MIN = Math.min.apply(null, window.QZ_SEED.people.map((p) => p.base));
+  const BASE_MAX = Math.max.apply(null, window.QZ_SEED.people.map((p) => p.base));
+
+  function friendAccuracy(p) {
+    const span = BASE_MAX - BASE_MIN || 1;
+    return Math.round(38 + ((p.base - BASE_MIN) / span) * 48);
+  }
+
+  /* 我的表现（全年百分比口径）
+     历史正确率 = (历史基线 + 本地答题) 的答对占比
+     赢过好友 = 历史正确率高于多少比例的好友 */
+  function myStats() {
+    const t = myTotals();
+    const h = (window.QZ_SEED.me && window.QZ_SEED.me.history) || { answered: 0, correct: 0 };
+    const answered = h.answered + t.totalAnswered;
+    const correct = h.correct + t.totalCorrect;
+    const accuracy = answered ? Math.round((correct / answered) * 100) : 0;
+
+    const friends = window.QZ_SEED.people;
+    const beaten = friends.filter((p) => friendAccuracy(p) < accuracy).length;
+
+    return {
+      accuracy,
+      answered,
+      correct,
+      beaten,
+      friends: friends.length,
+      beatPct: friends.length ? Math.round((beaten / friends.length) * 100) : 0
+    };
+  }
+
   function boardEntries(index) {
     const entries = window.QZ_SEED.people.map((p) => {
       const d = personDay(p, index);
@@ -267,12 +322,28 @@
     return { list: friends, answeredCount, correctCount, rate, correctLetter };
   }
 
+  /* 分类 → 评论池：取「最长命中」的话题，"Ramadan Sport" 优先于泛化的 "Ramadan" */
+  function topicOf(cat) {
+    let best = null;
+    let bestLen = 0;
+    window.QZ_SEED.topics.forEach((tp) => {
+      tp.match.forEach((m) => {
+        if (cat.indexOf(m) >= 0 && m.length > bestLen) {
+          best = tp;
+          bestLen = m.length;
+        }
+      });
+    });
+    return best;
+  }
+
   /* 讨论题评论：按主题匹配种子评论，点赞数随日期轻微浮动 */
   function commentsOf(index, question) {
     const seed = window.QZ_SEED;
     const cat = question.c || "";
-    const topic = seed.topics.find((tp) => tp.match.some((m) => cat.indexOf(m) >= 0));
-    const items = (topic ? topic.items : []).concat(seed.common).slice(0, 6);
+    const topic = topicOf(cat);
+    /* 返回全量答复：首页只显示前 6 条，其余进讨论页 */
+    const items = (topic ? topic.items : []).concat(seed.common);
     const jitter = (mulberry32(hashStr(question.i + ":" + index))() * 9) | 0;
 
     const list = items.map((item, i) => {
@@ -307,8 +378,8 @@
       });
     }
 
-    /* 第 2 条起的「我的发言」作为评论追加在最上方 */
-    myPosts(index).slice(1).reverse().forEach((p) => {
+    /* 我的全部发言都进评论区：最新一条置顶，带「You」标识 */
+    myPosts(index).slice().reverse().forEach((p) => {
       list.unshift({
         id: p.id,
         author: seed.me,
@@ -322,12 +393,13 @@
   }
 
   QZ.core = {
-    TZ, EPOCH, N, DAY_MS,
+    TZ, EPOCH, N, DAY_MS, NC, NO,
     dateInTz, dayIndex, dateOf, msToNextDay, formatDate, dayInfo,
-    state, save, answerOf, submitChoice, submitOpen, setLang,
+    state, save, answerOf, submitChoice, submitOpen, dayDone, setLang,
     toggleLike, likeCount, t, pick, myPosts,
     feedShared, toggleFeedShare,
     boardEntries, leaderboard, friendActivity, commentsOf, myTotals,
+    friendAccuracy, myStats,
     reset() {
       state.answers = {};
       state.likes = {};

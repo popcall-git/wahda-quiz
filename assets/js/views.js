@@ -1,6 +1,6 @@
 /* 视图：纯模板函数，返回 HTML 字符串；交互由 app.js 事件委托处理
    视觉结构：深色 hero 版块 → 数据卡 → 打卡格 → 内容卡
-   所有事件钩子保持不变：data-act / data-nav / data-countdown / data-input */
+   所有事件钩子保持不变：data-act / data-nav / data-input */
 (function () {
   const QZ = window.QZ;
   const C = QZ.core;
@@ -23,7 +23,8 @@
     flame: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12.4 2.6c3.2 3.9 5.1 6.6 5.1 9.6a5.5 5.5 0 0 1-11 0c0-1.7.7-3.2 1.7-4.6.3 1.1.8 1.9 1.5 2.5-.3-2.1.4-4.6 2.7-7.5z"/></svg>',    trophy: '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.8h8v4.4a4 4 0 0 1-8 0V3.8z"/><path d="M8 5.2H5.4v1.5a3 3 0 0 0 2.7 3"/><path d="M16 5.2h2.6v1.5a3 3 0 0 1-2.7 3"/><path d="M12 12.2v4"/><path d="M8.4 20.2h7.2l-.7-2.6H9.1l-.7 2.6z"/></svg>',
     target: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.1"/><circle cx="12" cy="12" r="2.3" fill="currentColor" stroke="none"/></svg>',    users: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="9.2" cy="8" r="3.2"/><path d="M3.4 19.2c0-3.2 2.6-5.4 5.8-5.4s5.8 2.2 5.8 5.4"/><circle cx="17.2" cy="9" r="2.5"/><path d="M16.2 14.2c2.5.2 4.4 2.1 4.4 4.4"/></svg>',
     chevronR: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6 15.5 12 9.5 18"/></svg>',
-    crown: '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M3.6 17.4h16.8l-1.4-8.9-3.9 3.1L12 6.2 8.9 11.6 5 8.5z"/><rect x="3.6" y="18.6" width="16.8" height="2" rx="1"/></svg>'
+    crown: '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M3.6 17.4h16.8l-1.4-8.9-3.9 3.1L12 6.2 8.9 11.6 5 8.5z"/><rect x="3.6" y="18.6" width="16.8" height="2" rx="1"/></svg>',
+    feed: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3.6" y="4.6" width="16.8" height="14.8" rx="3.2"/><path d="M7.4 9.4h9.2M7.4 12.8h9.2M7.4 16.2h5.2"/></svg>'
   };
 
   const social = {
@@ -126,15 +127,14 @@
     return { day: String(d.getUTCDate()).padStart(2, "0"), mon };
   }
 
-  /* 连续答题天数：今天未答则从昨天开始回溯，避免当天归零 */
+  /* 连续答题天数：今天未答则从昨天开始回溯，避免当天归零
+     首页 v4.6 起不再展示（改由「我的表现」承担），保留供后续打卡/推送场景复用 */
   function streakOf(index) {
     let start = index;
-    const today = C.answerOf(index);
-    if (!today) start = index - 1;
+    if (!C.dayDone(index)) start = index - 1;
     let n = 0;
     for (let i = start; i >= 0 && i > start - 400; i--) {
-      const a = C.answerOf(i);
-      if (a && (a.choice != null || a.text != null)) n++;
+      if (C.dayDone(i)) n++;
       else break;
     }
     return n;
@@ -151,11 +151,14 @@
     return labels.map((label, i) => {
       const idx = start + i;
       const a = C.answerOf(idx);
+      const posted = idx >= 0 && C.myPosts(idx).length > 0;
       return {
         label,
         index: idx,
-        done: !!(a && (a.choice != null || a.text != null)),
+        done: !!a || posted,
         correct: !!(a && a.correct),
+        /* 只做了开放题：显示圆点，不给对错 */
+        openOnly: !a && posted,
         isToday: idx === index,
         future: idx > index
       };
@@ -176,96 +179,91 @@
     </section>`;
   }
 
-  /* 好友答题情况（交互示意图 3A）：正确率环 + 名单，首页与答案页共用 */
-  function friendsBlock(friends, openAll) {
-    const LIMIT = 6;
-    const shown = openAll ? friends.list : friends.list.slice(0, LIMIT);
-    const hidden = friends.list.length - LIMIT;
-    return `<section class="friends-sec">
+  /* 我的表现：历史正确率 + 赢过好友比例，两块都用百分比呈现 */
+  function perfBlock(stats) {
+    const card = (k, pct, sub, cls) => `<div class="perf-card${cls ? " " + cls : ""}">
+      <span class="pc-k">${esc(k)}</span>
+      <b class="pc-n">${pct}<em>%</em></b>
+      <span class="pc-bar" role="presentation"><i style="width:${pct}%"></i></span>
+      <span class="pc-sub">${esc(sub)}</span>
+    </div>`;
+    return `<section class="perf">
       <div class="sec-head">
-        <h2>${esc(C.t("result.friends"))}</h2>
-        <span class="sec-tag">${esc(C.t("result.friendsAnswered", { n: friends.answeredCount }))}</span>
+        <h2>${esc(C.t("home.perfTitle"))}</h2>
+        <span class="sec-tag">${esc(C.t("home.perfTag"))}</span>
       </div>
-      <div class="fstat">
-        <div class="fstat-donut">
-          ${donut(friends.rate, 72, 7)}
-          <span class="fd-pct">${friends.rate}<em>%</em></span>
-        </div>
-        <div class="fstat-body">
-          <b>${esc(C.t("result.friendsCorrect", { a: friends.correctCount, b: friends.answeredCount }))}</b>
-          <span>${esc(C.t("result.friendsAnswered", { n: friends.answeredCount }))}</span>
-        </div>
+      <div class="perf-row">
+        ${card(C.t("home.accuracy"), stats.accuracy, C.t("home.accuracySub", { n: stats.answered }))}
+        ${card(C.t("home.beat"), stats.beatPct, C.t("home.beatSub", { a: stats.beaten, b: stats.friends }), "is-beat")}
       </div>
-      <ul class="friend-list">
-        ${shown.map((f) => `
-          <li>
-            ${avatar(f.initials, "sm", f.id)}
-            <span class="f-name">${esc(f.name)}<em>${esc(f.country)}</em></span>
-            <span class="f-tag ${f.correct ? "ok" : "no"}">${f.correct ? icon.check : icon.cross}${esc(f.letter)}</span>
-          </li>`).join("")}
-      </ul>
-      ${hidden > 0 ? `<button class="friends-more" data-act="more-friends">
-        <span>${esc(openAll ? C.t("result.collapse") : C.t("result.showAll", { n: friends.list.length }))}</span>
-        <i class="${openAll ? "up" : ""}">${icon.chevron}</i>
-      </button>` : ""}
     </section>`;
   }
 
-  /* 我的最近动态：已分享到 Feeds 的 Quiz 帖（按天倒序） */
-  function myFeedPosts() {
-    const days = Object.keys(C.state.feeds || {})
-      .map(Number)
-      .filter((n) => !Number.isNaN(n))
-      .sort((a, b) => b - a);
-    if (!days.length) return "";
-    const me = window.QZ_SEED.me;
-    return days.map((d) => {
-      const info = C.dayInfo(d);
-      const a = C.answerOf(d) || {};
-      const ok = !!a.correct;
-      return `<article class="feed-card my-post">
-        <div class="feed-head">
-          ${avatar(me.initials, "sm dim", me.id)}
-          <div class="feed-who">
-            <b>${esc(me.name)}</b>
-            <span>${esc(C.t("home.justNow"))}</span>
+  /* 评论区（开放题在首页与讨论页共用）：首页只显示前 limit 条，超出给 See all */
+  function commentsBlock(comments, opts) {
+    const o = opts || {};
+    const limit = o.limit || 0;
+    const shown = limit > 0 ? comments.slice(0, limit) : comments;
+    const hidden = comments.length - shown.length;
+    const sortBtn = o.sort
+      ? `<button class="sort-btn" data-act="sort">${esc(C.t("disc.sortLikes"))}${icon.chevron}</button>`
+      : "";
+    const seeAll = hidden > 0
+      ? `<button class="friends-more comments-more" data-nav="discussion">
+          <span>${esc(C.t("disc.seeAll", { n: comments.length }))}</span>
+          <i>${icon.arrow}</i>
+        </button>`
+      : "";
+    return `<div class="sec-head sec-head--split">
+      <h2>${esc(C.t("disc.comments", { n: comments.length }))}</h2>
+      ${sortBtn}
+    </div>
+
+    <ul class="comments">
+      ${shown.length === 0 ? `<li class="empty">${icon.users}${esc(C.t("disc.empty"))}</li>` : shown.map((c) => `
+        <li class="comment ${c.isMine ? "mine" : ""}">
+          ${avatar(c.author.initials, "sm", c.author.id)}
+          <div class="c-body">
+            <div class="c-name">${esc(c.isMine ? C.t("disc.you") : c.author.name)}<em>${esc(c.isMine ? window.QZ_SEED.me.country : c.author.country)}</em></div>
+            <p class="c-text">${esc(c.text)}</p>
+            <div class="c-actions">
+              <button class="c-reply" data-act="reply" data-id="${esc(c.id)}">${esc(C.t("disc.reply"))}</button>
+              ${c.replies.length ? `<button class="c-toggle" data-act="toggle-replies" data-id="${esc(c.id)}">${esc(C.t("disc.viewReplies", { n: c.replies.length }))}</button>` : ""}
+            </div>
+            ${c.replies.length ? `<ul class="replies" data-replies="${esc(c.id)}" hidden>
+              ${c.replies.map((r) => `<li>${avatar(r.author.initials, "xs", r.author.id)}<div><b>${esc(r.author.name)}</b><span>${esc(r.text)}</span></div></li>`).join("")}
+            </ul>` : ""}
           </div>
-          <span class="mp-badge ${ok ? "ok" : "no"}">${ok ? icon.check : icon.cross}${esc(C.t(ok ? "result.correctTitle" : "result.wrongTitle"))}</span>
-        </div>
-        <div class="sp-mini">
-          <span class="sp-brand">${esc(C.t("share.cardKicker"))}</span>
-          <p class="sp-q">${esc(C.pick(info.question.q))}</p>
-          <span class="sp-foot">${esc(C.t("share.cardBodySub"))}</span>
-        </div>
-      </article>`;
-    }).join("");
+          <button class="like-btn ${C.state.likes[c.id] ? "on" : ""}" data-act="like" data-id="${esc(c.id)}" aria-label="${esc(C.t("disc.like"))}" aria-pressed="${!!C.state.likes[c.id]}">
+            ${icon.heart}<span>${C.likeCount(c.likes, c.id)}</span>
+          </button>
+        </li>`).join("")}
+    </ul>
+    ${seeAll}`;
   }
 
-  function home(info, lb, opts) {
-    const mine = C.answerOf(info.index);
+  /* 首页：DAILY QUIZ 头部（含本周打卡）→ 选择题 → 开放题 → 评论 → 分享 → 统计 */
+  function home(info, opts) {
+    const index = info.index;
     const q = info.question;
-    const tag = q.t === 1 ? C.t("home.openTag") : C.t("home.choiceTag");
-    const dp = dateParts(info.date);
-    const streak = streakOf(info.index);
-    const totals = C.myTotals();
-    const week = weekOf(info.index);
-    const weekDone = week.filter((w) => w.done).length;
-    const lbAll = C.leaderboard(info.index, "all");
-    const top3 = lbAll.entries.slice(0, 3);
-    const answerOpen = !!(opts && opts.answerOpen);
+    const oq = info.open.question;
+    const mine = C.answerOf(index);
+    const posts = C.myPosts(index);
+    const choiceDone = !!mine;
+    const openDone = posts.length > 0;
+    const doneCount = (choiceDone ? 1 : 0) + (openDone ? 1 : 0);
     const selected = opts ? opts.selected : null;
-    const friendsOpen = !!(opts && opts.friendsOpen);
-    const friends = mine ? C.friendActivity(info.index, q) : null;
+    const comments = C.commentsOf(index, oq);
+    const week = weekOf(index);
+    const weekDone = week.filter((w) => w.done).length;
+    /* 分享到我的 Feeds：本阶段只做入口与本地状态，不接真实转发 */
+    const shared = C.feedShared(index);
+    const dp = dateParts(info.date);
     /* 按天轮换清真寺底图：m1 麦加 · m2 麦地那 · m3 阿布扎比 · m4 伊斯坦布尔 · m5 布城 */
-    const mIdx = (info.index % 5) + 1;
+    const mIdx = (index % 5) + 1;
 
-    /* 答题区三态：待答 CTA → 展开内联选项 → 已答内联判语 */
-    const ctaIdle = `<button class="cta cta--lime" data-act="open-answer">
-      <span class="cta-label">${esc(C.t("home.cta"))}</span>
-      <span class="cta-icon">${icon.arrow}</span>
-    </button>`;
-
-    const ctaOpen = `<div class="hero-answer">
+    /* 选择题：选项常驻题目下方，提交后就地判语 */
+    const optionsPanel = `<div class="hero-answer">
       <div class="options options--hero" role="radiogroup" aria-label="${esc(C.t("nav.today"))}">
         ${q.o.map((o, i) => `
           <button class="option option--hero${selected === i ? " is-on" : ""}" data-act="pick" data-i="${i}" role="radio" aria-checked="${selected === i}">
@@ -291,10 +289,22 @@
       </div>`;
     })() : "";
 
+    /* 本周打卡：并入 DAILY QUIZ 卡片顶部 */
+    const heroWeek = `<div class="hero-week" aria-label="${esc(C.t("home.week"))}">
+      ${week.map((w) => `
+        <span class="hw${w.done ? " is-done" : ""}${w.done && !w.correct && !w.openOnly ? " is-wrong" : ""}${w.openOnly ? " is-openonly" : ""}${w.isToday ? " is-today" : ""}${w.future ? " is-future" : ""}">
+          <em>${esc(w.label)}</em>
+          <i>${w.openOnly ? '<b class="hw-dot"></b>' : (w.done ? (w.correct ? icon.check : icon.cross) : "")}</i>
+        </span>`).join("")}
+      <span class="hw-count">${esc(C.t("home.weekDone", { n: weekDone }))}</span>
+    </div>`;
+
+    const openPlaceholder = posts.length ? C.t("disc.continue") : C.t("disc.placeholder");
+
     return `${topbar({ lang: true, avatar: true })}
 <main class="page page--home">
 
-  <section class="hero${mine ? " is-done" : ""}" style="background-image:
+  <section class="hero${choiceDone ? " is-done" : ""}" style="background-image:
       radial-gradient(120% 90% at 88% 4%, rgba(20, 128, 92, 0.5) 0%, rgba(20, 128, 92, 0) 52%),
       linear-gradient(158deg, rgba(9, 71, 53, 0.9) 0%, rgba(6, 53, 38, 0.93) 58%, rgba(3, 32, 22, 0.95) 100%),
       url('assets/mosque/m${mIdx}.jpg')">
@@ -310,111 +320,53 @@
       </span>
     </div>
 
+    ${heroWeek}
+
     <span class="hero-meta">
       <span>${esc(C.t("home.dayNo", { n: pad3(info.pos + 1) }))}</span>
       <i aria-hidden="true"></i>
       <span>${esc(C.t("home.round", { round: info.round }))}</span>
       <i aria-hidden="true"></i>
-      <span>${esc(tag)}</span>
+      <span>${esc(C.t("home.todayCount"))}</span>
     </span>
 
+    <span class="hero-step"><b>01</b>${esc(C.t("home.choiceTag"))}</span>
     <h1 class="hero-q">${esc(C.pick(q.q))}</h1>
 
-    ${mine ? verdict : answerOpen ? ctaOpen : ctaIdle}
+    ${choiceDone ? verdict : optionsPanel}
   </section>
 
-  ${mine ? knowBlock() : ""}
-  ${mine ? friendsBlock(friends, friendsOpen) : ""}
-  ${mine ? `<div class="share-row">
-    <button class="btn btn--line share-q" data-nav="share">
+  ${choiceDone ? knowBlock() : ""}
+
+  <section class="q-open${openDone ? " is-done" : ""}">
+    <div class="qo-head">
+      <span class="qo-no">02</span>
+      <span class="qo-tag">${esc(C.t("home.openTag"))}</span>
+      <span class="qo-state ${openDone ? "is-done" : ""}">${esc(openDone ? C.t("home.openAnswered") : C.t("home.openPending"))}</span>
+    </div>
+    <h2 class="qo-q">${esc(C.pick(oq.q))}</h2>
+
+    <div class="composer">
+      <label class="sr-only" for="answer-box">${esc(openPlaceholder)}</label>
+      <textarea id="answer-box" data-input="answer" rows="2" maxlength="500" placeholder="${esc(openPlaceholder)}"></textarea>
+      <button class="post-btn" data-act="post">${esc(C.t("disc.post"))}${icon.arrow}</button>
+    </div>
+  </section>
+
+  ${commentsBlock(comments, { limit: 6 })}
+
+  ${choiceDone ? perfBlock(C.myStats()) : ""}
+
+  ${doneCount > 0 ? `<div class="share-row">
+    <button class="btn btn--line feed-share${shared ? " is-on" : ""}" data-act="feed-share" aria-pressed="${shared}">
+      <span class="btn-ico">${shared ? icon.check : icon.feed}</span>
+      <span>${esc(shared ? C.t("feed.shared") : C.t("feed.share"))}</span>
+    </button>
+    <button class="btn btn--line" data-nav="share">
       <span>${esc(C.t("result.share"))}</span>
       <span class="btn-ico">${icon.share}</span>
     </button>
-    <button class="btn btn--line feed-share${C.feedShared(info.index) ? " is-on" : ""}" data-act="feed-share">
-      <span>${esc(C.feedShared(info.index) ? C.t("home.shareDone") : C.t("home.shareFeed"))}</span>
-      <span class="btn-ico">${icon.check}</span>
-    </button>
   </div>` : ""}
-
-  <div class="stat-row">
-    <div class="stat-card">
-      <span class="sc-ico sc-ico--flame">${icon.flame}</span>
-      <b class="sc-n">${streak}</b>
-      <span class="sc-k">${esc(C.t("home.streak"))}</span>
-    </div>
-    <div class="stat-card">
-      <span class="sc-ico sc-ico--target">${icon.target}</span>
-      <b class="sc-n">${totals.totalCorrect}</b>
-      <span class="sc-k">${esc(C.t("home.correct"))}</span>
-    </div>
-    <div class="stat-card">
-      <span class="sc-ico sc-ico--trophy">${icon.trophy}</span>
-      <b class="sc-n">${mine ? "#" + lb.rank : "—"}</b>
-      <span class="sc-k">${esc(C.t("home.rank"))}</span>
-    </div>
-  </div>
-
-  <section class="week">
-    <div class="sec-head">
-      <h2>${esc(C.t("home.week"))}</h2>
-      <span class="sec-tag">${esc(C.t("home.weekDone", { n: weekDone }))}</span>
-    </div>
-    <ul class="week-grid">
-      ${week.map((w) => `
-        <li class="${w.done ? "done" : ""}${w.done && !w.correct ? " wrong" : ""} ${w.isToday ? "today" : ""} ${w.future ? "future" : ""}">
-          <span class="wk-d">${esc(w.label)}</span>
-          <span class="wk-c">${w.done ? (w.correct ? icon.check : icon.cross) : ""}</span>
-        </li>`).join("")}
-    </ul>
-  </section>
-
-  <div class="ticker">
-    <div class="tk-head">
-      <span class="tk-k">${esc(C.t("home.nextReset"))}</span>
-      <b class="tk-v" data-countdown>--:--:--</b>
-    </div>
-    <div class="tk-track"><i data-countdown-bar style="width:0%"></i></div>
-    <span class="tk-tz">${esc(C.t("home.timezone"))}</span>
-  </div>
-
-  <section class="mini-board-sec">
-    <div class="sec-head">
-      <h2>${esc(C.t("home.boardTitle"))}</h2>
-      <span class="sec-tag">${esc(C.t("board.all"))}</span>
-      <button class="sec-link" data-nav="board">${esc(C.t("home.seeAll"))}${icon.chevronR}</button>
-    </div>
-    <ul class="mini-board">
-      ${top3.map((e, i) => `
-        <li class="${e.isMe ? "me" : ""}">
-          <span class="mb-rank r${i + 1}">${i + 1}</span>
-          ${avatar(e.initials, "sm", e.isMe ? "me" : e.id)}
-          <span class="mb-name">${esc(e.isMe ? C.t("board.you") : e.name)}</span>
-          <span class="mb-score">${e.totalCorrect}</span>
-        </li>`).join("")}
-    </ul>
-  </section>
-
-  <section class="feed">
-    <div class="sec-head">
-      <h2>${esc(C.t("home.feedLabel"))}</h2>
-      <span class="sec-tag">${esc(C.t("home.feedTag"))}</span>
-    </div>
-    ${myFeedPosts()}
-    <article class="feed-card">
-      <div class="feed-head">
-        ${avatar("TA", "sm dim", "u06")}
-        <div class="feed-who">
-          <b>${esc(C.t("home.feedAuthor"))}</b>
-          <span>${esc(C.t("home.feedMeta"))}</span>
-        </div>
-      </div>
-      <p class="feed-text">${esc(C.t("home.feedText"))}</p>
-      <div class="feed-media" style="background-image:url('assets/mosque/m4.jpg')">
-        <span class="fm-cap">${esc(C.t("home.feedCaption"))}</span>
-        ${girih("feed-girih")}
-      </div>
-    </article>
-  </section>
 
   ${isDemo() ? `<footer class="home-foot">
     <details class="demo-box">
@@ -540,10 +492,6 @@
   </a>` : ""}
 
   <div class="actions">
-    <button class="cta" data-nav="board">
-      <span class="cta-label">${esc(C.t("result.viewBoard"))}</span>
-      <span class="cta-icon">${icon.arrow}</span>
-    </button>
     <button class="btn btn--line btn--block" data-nav="share">${esc(C.t("result.share"))}</button>
   </div>
 </main>`;
@@ -552,7 +500,8 @@
   /* ---------------- 讨论题 ---------------- */
 
   function discussion(info) {
-    const q = info.question;
+    /* v4.1 起每天固定两题：讨论页固定跟随「开放题」这一条 */
+    const q = info.open.question;
     const posts = C.myPosts(info.index);
     const first = posts[0];
     const comments = C.commentsOf(info.index, q);
@@ -583,100 +532,7 @@
     </div>
   </article>
 
-  <div class="sec-head sec-head--split">
-    <h2>${esc(C.t("disc.comments", { n: comments.length }))}</h2>
-    <button class="sort-btn" data-act="sort">${esc(C.t("disc.sortLikes"))}${icon.chevron}</button>
-  </div>
-
-  <ul class="comments">
-    ${comments.length === 0 ? `<li class="empty">${icon.users}${esc(C.t("disc.empty"))}</li>` : comments.map((c) => `
-      <li class="comment ${c.isMine ? "mine" : ""}">
-        ${avatar(c.author.initials, "sm", c.author.id)}
-        <div class="c-body">
-          <div class="c-name">${esc(c.isMine ? C.t("disc.you") : c.author.name)}<em>${esc(c.isMine ? window.QZ_SEED.me.country : c.author.country)}</em></div>
-          <p class="c-text">${esc(c.text)}</p>
-          <div class="c-actions">
-            <button class="c-reply" data-act="reply" data-id="${esc(c.id)}">${esc(C.t("disc.reply"))}</button>
-            ${c.replies.length ? `<button class="c-toggle" data-act="toggle-replies" data-id="${esc(c.id)}">${esc(C.t("disc.viewReplies", { n: c.replies.length }))}</button>` : ""}
-          </div>
-          ${c.replies.length ? `<ul class="replies" data-replies="${esc(c.id)}" hidden>
-            ${c.replies.map((r) => `<li>${avatar(r.author.initials, "xs", r.author.id)}<div><b>${esc(r.author.name)}</b><span>${esc(r.text)}</span></div></li>`).join("")}
-          </ul>` : ""}
-        </div>
-        <button class="like-btn ${C.state.likes[c.id] ? "on" : ""}" data-act="like" data-id="${esc(c.id)}" aria-label="${esc(C.t("disc.like"))}" aria-pressed="${!!C.state.likes[c.id]}">
-          ${icon.heart}<span>${C.likeCount(c.likes, c.id)}</span>
-        </button>
-      </li>`).join("")}
-  </ul>
-</main>`;
-  }
-
-  /* ---------------- 排行榜 ---------------- */
-
-  /* 今日榜每人只有 0/1，领奖台改用提交时间区分；列表保留对错标记 */
-  function podScore(e, isToday) {
-    if (!isToday) return `<b>${e.totalCorrect}</b>`;
-    if (!e.answered) return `<span class="ps-none">—</span>`;
-    return `<span class="ps-time">${esc(timeOf(e.ts))}</span>`;
-  }
-
-  function rowScore(e, isToday) {
-    if (!isToday) return `<span class="b-score">${e.totalCorrect}</span>`;
-    if (!e.answered) return `<span class="b-score is-none">—</span>`;
-    return `<span class="b-mark ${e.todayCorrect ? "ok" : "no"}">${e.todayCorrect ? icon.check : icon.cross}</span>`;
-  }
-
-  function podiumCell(e, place, isToday) {
-    if (!e) return "";
-    return `<li class="pod pod-${place}">
-      ${place === 1 ? `<span class="pod-crown">${icon.crown}</span>` : ""}
-      ${avatar(e.initials, "pod-av" + (place === 1 ? " lg" : ""), e.isMe ? "me" : e.id)}
-      <span class="pod-name">${esc(e.isMe ? C.t("board.you") : e.name.split(" ")[0])}</span>
-      <span class="pod-score">${podScore(e, isToday)}</span>
-      <span class="pod-base">${place}</span>
-    </li>`;
-  }
-
-  function board(scope, lb) {
-    const isToday = scope !== "all";
-    const me = lb.entries.find((e) => e.isMe) || {};
-    const count = isToday ? me.todayCorrect || 0 : me.totalCorrect || 0;
-    const top = lb.entries.slice(0, 3);
-    const rest = lb.entries.slice(3);
-
-    return `${topbar({ back: true, title: C.t("board.title"), lang: true })}
-<main class="page">
-  <div class="tabs" role="tablist" aria-label="${esc(C.t("board.title"))}">
-    <button class="tab ${isToday ? "is-on" : ""}" data-nav="board" data-scope="today" role="tab" aria-selected="${isToday}">${esc(C.t("board.today"))}</button>
-    <button class="tab ${!isToday ? "is-on" : ""}" data-nav="board" data-scope="all" role="tab" aria-selected="${!isToday}">${esc(C.t("board.all"))}</button>
-  </div>
-
-  <section class="podium-wrap">
-    ${girih("podium-girih")}
-    <ul class="podium">
-      ${podiumCell(top[1], 2, isToday)}
-      ${podiumCell(top[0], 1, isToday)}
-      ${podiumCell(top[2], 3, isToday)}
-    </ul>
-  </section>
-
-  <section class="mypos">
-    <span class="mp-k">${esc(C.t("board.yourPosition"))}</span>
-    <span class="mp-n">${lb.rank}</span>
-    <span class="mp-s">${esc(isToday ? C.t("board.correctToday", { n: count }) : C.t("board.correctTotal", { n: count }))}</span>
-  </section>
-
-  <ul class="board-list">
-    ${rest.map((e, i) => `
-      <li class="${e.isMe ? "me" : ""}">
-        <span class="pos">${i + 4}</span>
-        ${avatar(e.initials, "sm", e.isMe ? "me" : e.id)}
-        <span class="b-name">${esc(e.isMe ? C.t("board.you") : e.name)}<em>${esc(e.country)}</em></span>
-        ${rowScore(e, isToday)}
-      </li>`).join("")}
-  </ul>
-
-  <p class="note">${esc(C.t("board.note"))}</p>
+  ${commentsBlock(comments, { sort: true })}
 </main>`;
   }
 
@@ -750,5 +606,5 @@
 <main class="page"><p class="hint">404</p></main>`;
   }
 
-  QZ.views = { home, question, result, discussion, board, share, notFound, icon, esc };
+  QZ.views = { home, question, result, discussion, share, notFound, icon, esc };
 })();

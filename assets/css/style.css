@@ -2387,3 +2387,382 @@ button { cursor: pointer; }
   color: var(--g-700);
   font-weight: 700;
 }
+
+/* ============================================================
+   v4 — 每日提醒条置顶 / 选项常驻 / 开放题作答
+   ============================================================ */
+
+/* ---------- 顶部每日提醒条（原 This week，改为紧凑版） ---------- */
+.week--top {
+  margin: 0 0 12px;
+  padding: 11px 12px 9px;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.week--top .sec-head {
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.week--top .sec-head h2 {
+  font-size: var(--t-body);
+  letter-spacing: 0;
+}
+
+.week--top .week-grid { gap: 5px; }
+
+.week--top .week-grid li {
+  padding: 5px 0 4px;
+  gap: 3px;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  background: var(--canvas);
+}
+
+.week--top .wk-d { font-size: var(--t-micro); }
+.week--top .wk-c { width: 20px; height: 20px; }
+.week--top .wk-c svg { width: 11px; height: 11px; }
+
+.week--top .week-grid li.today { box-shadow: 0 0 0 2px rgba(17, 116, 86, 0.14); }
+
+/* ---------- 开放题：hero 内写作框 ---------- */
+.hero-compose { display: flex; flex-direction: column; gap: 10px; }
+
+.hero-input {
+  width: 100%;
+  min-height: 84px;
+  resize: vertical;
+  padding: 11px 13px;
+  border-radius: var(--r-md);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  font-family: var(--font-text);
+  font-size: var(--t-body);
+  line-height: var(--lh-snug);
+}
+
+.hero-input::placeholder { color: rgba(255, 255, 255, 0.5); }
+.hero-input:focus {
+  outline: none;
+  border-color: var(--lime);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.hero-compose .hero-verdict { margin: 0; }
+
+/* ---------- 首页评论区（开放题）与统计两列 ---------- */
+.page--home .comments { margin-bottom: 4px; }
+
+.stat-row--two { grid-template-columns: repeat(2, 1fr); }
+
+/* ---------- Fun fact / story：紧跟选择题（提交后出现） ---------- */
+.page--home .hero + .know {
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+
+/* ============================================================
+   v4.1 — 一天两题 / 本周打卡并入 hero / 移除动态区
+   ============================================================ */
+
+/* ---------- hero 内的本周打卡 ---------- */
+.hero-week {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 13px 0 11px;
+  padding: 0;
+}
+
+.hw {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 0 4px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.hw em {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1;
+}
+
+.hw i {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  color: transparent;
+}
+
+.hw i svg { width: 9px; height: 9px; }
+
+.hw.is-done i { background: var(--lime); border-color: transparent; color: var(--g-950); }
+.hw.is-wrong i { background: rgba(255, 180, 171, 0.9); border-color: transparent; color: rgba(120, 20, 10, 0.9); }
+.hw.is-openonly i { background: rgba(255, 255, 255, 0.22); border-color: transparent; }
+
+.hw-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  display: block;
+}
+
+.hw.is-today {
+  background: rgba(217, 243, 108, 0.14);
+  border-color: rgba(217, 243, 108, 0.45);
+}
+.hw.is-today em { color: var(--lime); }
+.hw.is-today i { border-color: rgba(217, 243, 108, 0.7); }
+
+.hw.is-future { opacity: 0.42; }
+
+.hw-count {
+  flex: 0 0 auto;
+  margin-left: 3px;
+  font-size: var(--t-micro);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+}
+
+/* ---------- 题号标签 ---------- */
+.hero-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 7px;
+  font-size: var(--t-micro);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.hero-step b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-xs);
+  background: rgba(217, 243, 108, 0.16);
+  color: var(--lime);
+  font-family: var(--font-num);
+  font-size: var(--t-micro);
+}
+
+/* ---------- 第二题（开放题）卡片 ---------- */
+.q-open {
+  position: relative;
+  margin-top: 12px;
+  padding: 16px 16px 14px;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--sh-sm);
+}
+
+.qo-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.qo-no {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--r-xs);
+  background: var(--g-50);
+  color: var(--g-700);
+  font-family: var(--font-num);
+  font-size: var(--t-micro);
+  font-weight: 700;
+}
+
+.qo-tag {
+  font-size: var(--t-micro);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--g-700);
+}
+
+.qo-state {
+  margin-left: auto;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  background: var(--canvas);
+  color: var(--ink-3);
+  font-size: var(--t-micro);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.qo-state.is-done { background: var(--g-100); color: var(--g-700); }
+
+.qo-q {
+  margin: 0 0 13px;
+  font-family: var(--font-display);
+  font-size: var(--t-display-s);
+  font-weight: 700;
+  line-height: var(--lh-snug);
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.qo-mine {
+  margin: 0 0 11px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--g-50);
+  border-left: 2.5px solid var(--g-600);
+}
+
+.qo-mine-k {
+  display: block;
+  margin-bottom: 3px;
+  font-size: var(--t-micro);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--g-700);
+}
+
+.qo-mine p {
+  margin: 0;
+  font-size: var(--t-small);
+  line-height: var(--lh-snug);
+  color: var(--ink-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---------- 单按钮分享行 ---------- */
+.share-q.btn--block { margin-top: 14px; }
+.share-q .btn-ico { display: inline-flex; }
+.share-q .btn-ico svg { width: 15px; height: 15px; }
+
+/* ============================================================
+   v4.4 — 双入口分享行：分享到我的动态 / 分享这道题
+   ============================================================ */
+
+.page--home .share-row { margin-top: 14px; }
+
+.share-row .btn {
+  height: 46px;
+  padding: 0 10px;
+  gap: 6px;
+  font-size: var(--t-small);
+  white-space: nowrap;
+}
+
+.share-row .btn-ico { flex: 0 0 auto; }
+.share-row .btn-ico svg { width: 15px; height: 15px; }
+
+/* ============================================================
+   v4.5 — 我的表现：历史正确率 / 赢过好友（百分比口径）
+   ============================================================ */
+
+.perf { margin-top: 20px; }
+.perf .sec-head { margin-bottom: 10px; }
+
+.perf-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.perf-card {
+  padding: 14px 14px 13px;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--sh-sm);
+}
+
+.pc-k {
+  display: block;
+  font-size: var(--t-small);
+  font-weight: 600;
+  color: var(--ink-2);
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pc-n {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  margin: 7px 0 10px;
+  font-family: var(--font-num);
+  font-size: var(--t-hero);
+  font-weight: 700;
+  line-height: var(--lh-none);
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.pc-n em {
+  font-family: var(--font-text);
+  font-size: var(--t-title-sm);
+  font-style: normal;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+
+.pc-bar {
+  display: block;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.pc-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--g-500), var(--g-300));
+  transition: width 560ms var(--ease-out);
+}
+
+.perf-card.is-beat .pc-bar i {
+  background: linear-gradient(90deg, var(--sky), var(--sky-soft));
+}
+
+.pc-sub {
+  display: block;
+  margin-top: 8px;
+  font-size: var(--t-label);
+  color: var(--ink-3);
+  letter-spacing: 0.005em;
+}

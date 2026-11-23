@@ -4,7 +4,7 @@
   const V = window.QZ.views;
   const app = document.getElementById("app");
   const toastEl = document.getElementById("toast");
-  const ui = { selected: null, sort: "likes", friendsOpen: false, answerOpen: false };
+  const ui = { selected: null, sort: "likes", friendsOpen: false };
   let toastTimer = null;
 
   /* ---------- 路由 ---------- */
@@ -43,7 +43,7 @@
     let html = "";
 
     if (route.name === "home") {
-      html = V.home(info, C.leaderboard(index, "today"), { answerOpen: ui.answerOpen, selected: ui.selected, friendsOpen: ui.friendsOpen });
+      html = V.home(info, { selected: ui.selected, friendsOpen: ui.friendsOpen });
     } else if (route.name === "q") {
       if (info.question.t === 0 && C.answerOf(index)) {
         history.replaceState(null, "", "#/a");
@@ -58,8 +58,9 @@
         return render(keepScroll);
       }
       html = info.question.t === 0 ? V.result(info, { friendsOpen: ui.friendsOpen }) : V.discussion(info);
-    } else if (route.name === "l") {
-      html = V.board(route.sub === "all" ? "all" : "today", C.leaderboard(index, route.sub === "all" ? "all" : "today"));
+    } else if (route.name === "d") {
+      /* 开放题讨论页：显示该题的全部答复 */
+      html = V.discussion(info);
     } else if (route.name === "s") {
       html = V.share(info);
     } else {
@@ -72,28 +73,7 @@
     document.documentElement.lang = C.state.lang === "zh" ? "zh-CN" : "en";
     if (keepScroll) window.scrollTo(0, y);
     else window.scrollTo(0, 0);
-    tick();
   }
-
-  /* ---------- 倒计时 ---------- */
-
-  const pad = (n) => String(n).padStart(2, "0");
-
-  function tick() {
-    const ms = C.msToNextDay();
-    const el = document.querySelector("[data-countdown]");
-    if (el) {
-      const total = Math.floor(ms / 1000);
-      el.textContent = `${pad(Math.floor(total / 3600))}:${pad(Math.floor((total % 3600) / 60))}:${pad(total % 60)}`;
-    }
-    const bar = document.querySelector("[data-countdown-bar]");
-    if (bar) {
-      const passed = Math.min(1, Math.max(0, 1 - ms / C.DAY_MS));
-      bar.style.width = (passed * 100).toFixed(2) + "%";
-    }
-  }
-
-  setInterval(tick, 1000);
 
   let lastDate = C.dateInTz();
   setInterval(() => {
@@ -131,14 +111,6 @@
         return;
       }
 
-      if (act === "open-answer") {
-        /* 首页内联展开答题面板，不再跳转独立页面 */
-        ui.answerOpen = !ui.answerOpen;
-        ui.selected = null;
-        render(true);
-        return;
-      }
-
       if (act === "pick") {
         ui.selected = Number(actEl.dataset.i);
         render(true);
@@ -156,19 +128,9 @@
         const onHome = parse().name === "home";
         C.submitChoice(index, ui.selected, ui.selected === q.a);
         ui.selected = null;
-        ui.answerOpen = false;
-        /* 首页内联答题：提交后就地展示结果，不跳转 */
-        if (onHome) render(false);
+        /* 首页内联答题：提交后就地展示结果，不跳转、不跳回顶部 */
+        if (onHome) render(true);
         else navigate("#/a");
-        return;
-      }
-
-      if (act === "feed-share") {
-        /* 把当日 Quiz 分享到自己的 Feeds（再次点击撤回） */
-        const index = currentIndex();
-        const posted = C.toggleFeedShare(index);
-        toast(C.t(posted ? "feed.posted" : "feed.removed"));
-        render(true);
         return;
       }
 
@@ -183,6 +145,14 @@
         }
         C.submitOpen(index, text);
         toast(C.t("disc.posted"));
+        render(true);
+        return;
+      }
+
+      if (act === "feed-share") {
+        /* 预留入口：只在本地记录状态，不做真实转发 */
+        const on = C.toggleFeedShare(currentIndex());
+        toast(C.t(on ? "feed.posted" : "feed.removed"));
         render(true);
         return;
       }
@@ -241,15 +211,15 @@
 
     if (navEl) {
       const target = navEl.dataset.nav;
-      if (target === "board") {
-        navigate("#/l/" + (navEl.dataset.scope || "today"));
-      } else if (target === "question") {
+      if (target === "question") {
         ui.selected = null;
         navigate("#/q");
       } else if (target === "result") {
         navigate("#/a");
       } else if (target === "share") {
         navigate("#/s");
+      } else if (target === "discussion") {
+        navigate("#/d");
       } else {
         navigate("#/");
       }
